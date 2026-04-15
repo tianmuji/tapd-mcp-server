@@ -1,4 +1,6 @@
 import https from "https";
+import http from "http";
+import fs from "fs";
 import { URL } from "url";
 import type { Credentials } from "./auth.js";
 
@@ -204,6 +206,66 @@ export class TapdClient {
       is_assistant_exec_log: 1,
       dsc_token: "",
     });
+  }
+
+  /** Download a file (attachment) to local path, following redirects */
+  downloadFile(fileUrl: string, destPath: string): Promise<void> {
+    return new Promise((resolve, reject) => {
+      if (!this.credentials) {
+        reject(new Error("Not authenticated. Please call 'tapd-auth' first."));
+        return;
+      }
+
+      const doRequest = (url: string, redirectCount = 0): void => {
+        if (redirectCount > 5) {
+          reject(new Error("Too many redirects"));
+          return;
+        }
+
+        const parsedUrl = new URL(url);
+        const protocol = parsedUrl.protocol === "https:" ? https : http;
+        const options: https.RequestOptions = {
+          timeout: 120000,
+          headers: {
+            Cookie: this.credentials!.cookies,
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+          },
+        };
+
+        const req = protocol.get(url, options, (res) => {
+          if (res.statusCode && res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+            doRequest(res.headers.location, redirectCount + 1);
+            return;
+          }
+          if (res.statusCode !== 200) {
+            reject(new Error(`Download failed with status ${res.statusCode}`));
+            return;
+          }
+          const file = fs.createWriteStream(destPath);
+          res.pipe(file);
+          file.on("finish", () => {
+            file.close();
+            resolve();
+          });
+          file.on("error", (err) => {
+            fs.unlink(destPath, () => {});
+            reject(err);
+          });
+        });
+        req.on("error", reject);
+        req.on("timeout", () => {
+          req.destroy();
+          reject(new Error("Download timeout"));
+        });
+      };
+
+      doRequest(fileUrl);
+    });
+  }
+
+  /** Get the download URL for a bug attachment */
+  getAttachmentDownloadUrl(workspaceId: string, attachmentId: string): string {
+    return `${this.baseUrl}/tfl/${workspaceId}/attachments/download/${attachmentId}`;
   }
 
   /** Get workspace config (workflow statuses, workitem types, etc.) */

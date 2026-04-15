@@ -1,0 +1,6 @@
+{
+  "tapd": {
+    "command": "node",
+    "args": ["/Users/yujie_wu/yapi/tapd-mcp-server/dist/index.js"]
+  }
+}

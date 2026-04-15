@@ -1,0 +1,5 @@
+node_modules/
+dist/
+.browser-data/
+tapd-api-log.json
+capture-api.js

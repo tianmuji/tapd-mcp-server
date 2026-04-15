@@ -1,0 +1,8 @@
+{
+  "name": "tapd",
+  "description": "TAPD bug tracking management plugin. Query bug lists, view bug details, and fix bugs with e2e test verification.",
+  "version": "1.0.0",
+  "author": {
+    "name": "CamScanner"
+  }
+}

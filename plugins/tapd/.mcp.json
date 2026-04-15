@@ -1,6 +1,6 @@
 {
   "tapd": {
     "command": "npx",
-    "args": ["-y", "git+https://github.com/tianmuji/tapd-mcp-server.git"]
+    "args": ["-y", "@camscanner/tapd-mcp-server@latest"]
   }
 }

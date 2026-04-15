@@ -1,0 +1,14 @@
+{
+  "name": "tapd-plugins",
+  "owner": {
+    "name": "CamScanner"
+  },
+  "plugins": [
+    {
+      "name": "tapd",
+      "description": "TAPD bug tracking management plugin. Query bugs, view details, and assist bug fix workflow.",
+      "source": "./plugins/tapd",
+      "category": "development"
+    }
+  ]
+}

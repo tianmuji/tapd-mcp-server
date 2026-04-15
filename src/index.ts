@@ -116,38 +116,22 @@ server.tool(
 // Tool: get_bug_detail
 server.tool(
   "get_bug_detail",
-  "Get detailed information about a specific bug by searching for its ID in the bug list",
+  "Get full detail of a specific bug including description, comments, attachments, and all fields",
   {
     workspace_id: z.string().describe("TAPD workspace ID"),
-    bug_id: z.string().describe("Bug ID (full ID like 1159504807001098704, or short ID like 1098704)"),
+    bug_id: z.string().describe("Bug ID (full ID like 1159504807001098704)"),
   },
   async ({ workspace_id, bug_id }) => {
     const authErr = await requireAuth();
     if (authErr) return { content: [{ type: "text", text: authErr }] };
 
     try {
-      // Fetch bug list and find matching bug
-      // TAPD web API doesn't expose a direct single-bug endpoint easily,
-      // so we search through the list
-      const res = await client.getBugsList({
-        workspace_id,
-        perpage: 200,
-      });
-
-      const bugsList = res.data?.bugs_list_ret?.data?.bugs_list || [];
-      const found = bugsList.find((item: any) => {
-        const bug = item.Bug;
-        return bug && (
-          String(bug.id) === bug_id ||
-          String(bug.short_id) === bug_id
-        );
-      });
-
-      if (!found) {
-        return { content: [{ type: "text", text: `Bug with ID "${bug_id}" not found in current list. Try checking the workspace_id or browsing more pages.` }] };
+      const res = await client.getBugDetail(workspace_id, bug_id);
+      const info = res.data?.get_info_ret?.data;
+      if (!info) {
+        return { content: [{ type: "text", text: `Bug "${bug_id}" not found.` }] };
       }
-
-      return { content: [{ type: "text", text: formatBugDetail(found) }] };
+      return { content: [{ type: "text", text: formatBugDetail(info) }] };
     } catch (err: any) {
       return { content: [{ type: "text", text: `Error: ${err.message}` }] };
     }

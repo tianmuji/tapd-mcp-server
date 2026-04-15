@@ -58,53 +58,92 @@ export function formatBugsList(data: any): string {
   return lines.join("\n");
 }
 
-/** Format a single bug detail */
-export function formatBugDetail(bug: any): string {
-  if (!bug) return "Bug not found.";
+/** Format a single bug detail (from common_get_info API) */
+export function formatBugDetail(data: any): string {
+  if (!data) return "Bug not found.";
 
-  const b = bug.Bug || bug;
+  const b = data.Bug || data;
   const lines: string[] = [];
 
   const severityIcon = getSeverityIcon(b.severity);
   lines.push(`# ${severityIcon} ${b.title}`);
   lines.push("");
+
+  // Core fields table
   lines.push(`| Field | Value |`);
   lines.push(`|-------|-------|`);
   lines.push(`| **ID** | ${b.id} |`);
-  lines.push(`| **Short ID** | ${b.short_id || "-"} |`);
-  lines.push(`| **Status** | ${b.status_alias || b.status || "-"} |`);
+  lines.push(`| **Status** | ${b.status || "-"} |`);
   lines.push(`| **Severity** | ${b.severity || "-"} |`);
   lines.push(`| **Priority** | ${b.priority || "-"} |`);
+  lines.push(`| **Platform** | ${b.platform || "-"} |`);
   lines.push(`| **Reporter** | ${b.reporter || "-"} |`);
   lines.push(`| **Owner** | ${b.current_owner || b.de || "-"} |`);
   lines.push(`| **Developer** | ${b.de || "-"} |`);
+  lines.push(`| **Tester** | ${b.te || "-"} |`);
   lines.push(`| **Created** | ${b.created || "-"} |`);
-  lines.push(`| **Version** | ${b.version_report || "-"} |`);
+  lines.push(`| **Modified** | ${b.modified || "-"} |`);
+  lines.push(`| **Resolved** | ${b.resolved || "-"} |`);
+  lines.push(`| **Closed** | ${b.closed || "-"} |`);
+  lines.push(`| **Version (Report)** | ${b.version_report || "-"} |`);
+  lines.push(`| **Version (Fix)** | ${b.version_fix || "-"} |`);
   lines.push(`| **Resolution** | ${b.resolution || "-"} |`);
-  lines.push(`| **Due** | ${b.due || "-"} |`);
-  lines.push(`| **Workspace** | ${b.project_id || b.workspace_id || "-"} |`);
+  lines.push(`| **Module** | ${b.module || "-"} |`);
+  lines.push(`| **Source** | ${b.source || "-"} |`);
+  lines.push(`| **Frequency** | ${b.frequency || "-"} |`);
+  lines.push(`| **Workspace** | ${b.project_id || "-"} |`);
+  if (b.custom_field_one) lines.push(`| **Custom (Platform)** | ${b.custom_field_one} |`);
+  if (b.custom_field_two) lines.push(`| **Custom (Intro Version)** | ${b.custom_field_two} |`);
+  if (b.story_id) lines.push(`| **Story ID** | ${b.story_id} |`);
 
-  if (b.custom_field_one) lines.push(`| **Platform** | ${b.custom_field_one} |`);
-  if (b.custom_field_11) lines.push(`| **Custom Field** | ${b.custom_field_11} |`);
-
-  // Related story
-  if (bug.BugStoryRelation && bug.BugStoryRelation.length > 0) {
+  // URL
+  if (data.copy_info?.url) {
     lines.push("");
-    lines.push("### Related Stories");
-    for (const rel of bug.BugStoryRelation) {
-      const name = b.BugStoryRelation_story_name || rel.relative_id;
-      lines.push(`- ${name} (ID: ${rel.relative_id})`);
-    }
+    lines.push(`**URL:** ${data.copy_info.url}`);
   }
 
-  // Description (if available)
+  // Description
   if (b.description) {
     lines.push("");
     lines.push("### Description");
-    lines.push(b.description);
+    lines.push(stripHtml(b.description));
+  }
+
+  // Comments
+  if (data.comment_list?.comments?.length > 0) {
+    lines.push("");
+    lines.push("### Comments");
+    for (const comment of data.comment_list.comments) {
+      lines.push(`- **${comment.author || "?"}** (${comment.created || "?"}): ${stripHtml(comment.description || "")}`);
+    }
+  }
+
+  // Attachments
+  if (data.attachment_list?.attachments?.length > 0) {
+    lines.push("");
+    lines.push("### Attachments");
+    for (const att of data.attachment_list.attachments) {
+      lines.push(`- ${att.filename} (${att.content_type || "?"}, ${att.size ? Math.round(att.size / 1024) + "KB" : "?"})`);
+    }
   }
 
   return lines.join("\n");
+}
+
+/** Strip HTML tags to plain text */
+function stripHtml(html: string): string {
+  return html
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/p>/gi, "\n")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&nbsp;/g, " ")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
 }
 
 /** Format workspace config (bug workflow) */

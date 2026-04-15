@@ -183,6 +183,29 @@ export class TapdClient {
     });
   }
 
+  /** Get single bug detail by ID */
+  async getBugDetail(workspaceId: string, bugId: string): Promise<TapdResponse> {
+    return this.post("/api/aggregation/workitem_aggregation/common_get_info", {
+      workspace_id: workspaceId,
+      entity_id: bugId,
+      entity_type: "bug",
+      api_controller_prefix: "",
+      enable_description: "true",
+      is_detail: 1,
+      blacklist_fields: [],
+      identifier: "app_for_editor,app_for_obj_more,app_for_obj_dialog_dropdown,app_for_obj_detail_panel,app_for_obj_detail_bottom_card,app_for_obj_attachment,app_for_obj_copy_link,app_for_obj_additional_panel",
+      installed_app_entity: {
+        obj_id: bugId,
+        obj_type: "bug",
+        obj_name: "",
+      },
+      has_edit_rule_fields: [],
+      is_archived: 0,
+      is_assistant_exec_log: 1,
+      dsc_token: "",
+    });
+  }
+
   /** Get workspace config (workflow statuses, workitem types, etc.) */
   async getWorkspaceConfig(workspaceId: string): Promise<TapdResponse> {
     return this.get("/api/entity/entity_preview/get_workspaces_config", {

@@ -3,6 +3,7 @@ name: tapd
 description: "TAPD Bug修复助手。当用户提到 TAPD、bug修复、缺陷、tapd bug 等关键词时触发，或用户要求根据 TAPD bug 信息定位和修复代码问题时触发。"
 argument-hint: <Bug ID 或关键词>
 disable-model-invocation: false
+allowed-tools: ["mcp__plugin_tapd_tapd__*"]
 ---
 
 # TAPD Bug 修复助手

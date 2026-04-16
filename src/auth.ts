@@ -119,6 +119,10 @@ export async function startBrowserLogin(): Promise<Credentials> {
 
   if (!fs.existsSync(BROWSER_DATA_DIR)) fs.mkdirSync(BROWSER_DATA_DIR, { recursive: true });
 
+  // Clean up stale lock file left by a previous crash
+  const lockFile = path.join(BROWSER_DATA_DIR, "SingletonLock");
+  try { fs.unlinkSync(lockFile); } catch { /* ignore */ }
+
   console.error("[Auth] Launching browser for TAPD login...");
   const context = await chromium.launchPersistentContext(BROWSER_DATA_DIR, {
     headless: false,

@@ -20,6 +20,7 @@ allowed-tools: ["mcp__plugin_tapd_tapd__*"]
 4. **get_bugs_list** — 获取 Bug 列表（支持分页）
 5. **get_bug_detail** — 获取 Bug 完整详情（描述、评论、附件）
 6. **get_bug_workflow** — 获取 Bug 工作流状态配置
+7. **analyze_bug_video** — 下载 Bug 附件中的视频，提取关键帧进行视觉分析，帮助理解 Bug 复现过程
 
 ## 核心原则：先验证再修复
 
@@ -32,6 +33,7 @@ allowed-tools: ["mcp__plugin_tapd_tapd__*"]
 1. 如果未认证，先调用 `tapd-auth` 登录
 2. 根据用户提供的 bug ID 或关键词，使用 `get_bug_detail` 或 `get_bugs_list` 获取 bug 信息
 3. 提取关键信息：**bug 标题、描述、复现步骤、严重程度、相关模块**
+4. **如果 Bug 包含视频附件**，调用 `analyze_bug_video` 提取关键帧进行视觉分析，更直观地理解 Bug 的表现和复现路径
 
 ### 第 2 步：分析代码，确认 Bug 是否存在
 

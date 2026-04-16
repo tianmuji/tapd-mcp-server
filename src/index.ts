@@ -212,7 +212,29 @@ server.tool(
         [".mp4", ".mov", ".avi", ".webm", ".mkv", ".flv"].some(ext => fn.endsWith(ext));
     });
 
-    if (videoAttachments.length === 0) {
+    // 2b. Also check for embedded videos in bug description HTML
+    const embeddedVideos: Array<{ url: string; filename: string }> = [];
+    const description = info.Bug?.description || "";
+    const videoTagRegex = /<video[^>]*\bsrc=["']([^"']+)["'][^>]*>/gi;
+    const sourceTagRegex = /<source[^>]*\bsrc=["']([^"']+)["'][^>]*>/gi;
+    const seenUrls = new Set<string>();
+
+    for (const regex of [videoTagRegex, sourceTagRegex]) {
+      let match;
+      while ((match = regex.exec(description)) !== null) {
+        const url = match[1];
+        if (!seenUrls.has(url)) {
+          seenUrls.add(url);
+          // Derive a filename from the URL
+          const urlPath = new URL(url).pathname;
+          const segments = urlPath.split("/").filter(Boolean);
+          const filename = segments[segments.length - 1] || "embedded_video";
+          embeddedVideos.push({ url, filename: filename.includes(".") ? filename : `${filename}.mp4` });
+        }
+      }
+    }
+
+    if (videoAttachments.length === 0 && embeddedVideos.length === 0) {
       const allFiles = attachments.map((a: any) => `  - ${a.filename} (${a.content_type || "?"})`).join("\n");
       return {
         content: [{
@@ -222,18 +244,29 @@ server.tool(
       };
     }
 
-    // 3. Process first video attachment
-    const video = videoAttachments[0];
-    const videoId = video.id || video.attachment_id;
-    const videoName = video.filename || "video";
+    // 3. Determine video source: prefer file attachments, fallback to embedded
+    let videoId: string | undefined;
+    let videoName: string;
+    let directDownloadUrl: string | undefined;
 
-    if (!videoId) {
-      return {
-        content: [{
-          type: "text" as const,
-          text: `Video attachment "${videoName}" found but has no downloadable ID. Attachment data: ${JSON.stringify(video, null, 2)}`,
-        }],
-      };
+    if (videoAttachments.length > 0) {
+      const video = videoAttachments[0];
+      videoId = video.id || video.attachment_id;
+      videoName = video.filename || "video";
+
+      if (!videoId) {
+        return {
+          content: [{
+            type: "text" as const,
+            text: `Video attachment "${videoName}" found but has no downloadable ID. Attachment data: ${JSON.stringify(video, null, 2)}`,
+          }],
+        };
+      }
+    } else {
+      // Use embedded video from description — use the original URL directly
+      // file.tapd.cn preview URLs work with the correct cookies (fileCookies)
+      directDownloadUrl = embeddedVideos[0].url;
+      videoName = embeddedVideos[0].filename;
     }
 
     // Create temp directory
@@ -244,7 +277,7 @@ server.tool(
 
     try {
       // 4. Download video
-      const downloadUrl = video.download_url || client.getAttachmentDownloadUrl(workspace_id, videoId);
+      const downloadUrl = directDownloadUrl || client.getAttachmentDownloadUrl(workspace_id, videoId!);
       await client.downloadFile(downloadUrl, videoPath);
 
       // Verify download

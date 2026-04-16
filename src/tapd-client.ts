@@ -11,6 +11,8 @@ export interface TapdResponse<T = any> {
   request_id?: string;
 }
 
+const BROWSER_UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36";
+
 export class TapdClient {
   private baseUrl = "https://www.tapd.cn";
   private credentials: Credentials | null = null;
@@ -39,7 +41,7 @@ export class TapdClient {
         timeout: 30000,
         headers: {
           Cookie: this.credentials.cookies,
-          "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+          "User-Agent": BROWSER_UA,
           Accept: "application/json, text/plain, */*",
         },
       };
@@ -80,7 +82,7 @@ export class TapdClient {
           Cookie: this.credentials.cookies,
           "Content-Type": "application/json",
           "Content-Length": Buffer.byteLength(data),
-          "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+          "User-Agent": BROWSER_UA,
           Accept: "application/json, text/plain, */*",
           Referer: "https://www.tapd.cn/",
         },
@@ -208,6 +210,17 @@ export class TapdClient {
     });
   }
 
+  /** Get the appropriate cookies for a given URL */
+  private getCookiesForUrl(url: string): string {
+    if (!this.credentials) return "";
+    const parsedUrl = new URL(url);
+    // Use fileCookies for file.tapd.cn, fall back to www cookies
+    if (parsedUrl.hostname === "file.tapd.cn" && this.credentials.fileCookies) {
+      return this.credentials.fileCookies;
+    }
+    return this.credentials.cookies;
+  }
+
   /** Download a file (attachment) to local path, following redirects */
   downloadFile(fileUrl: string, destPath: string): Promise<void> {
     return new Promise((resolve, reject) => {
@@ -224,11 +237,15 @@ export class TapdClient {
 
         const parsedUrl = new URL(url);
         const protocol = parsedUrl.protocol === "https:" ? https : http;
+        const cookies = this.getCookiesForUrl(url);
         const options: https.RequestOptions = {
           timeout: 120000,
           headers: {
-            Cookie: this.credentials!.cookies,
-            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+            Cookie: cookies,
+            "User-Agent": BROWSER_UA,
+            Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+            "Accept-Language": "zh,zh-CN;q=0.9",
+            Referer: "https://www.tapd.cn/",
           },
         };
 

@@ -4,7 +4,8 @@ import os from "os";
 import { chromium } from "playwright-core";
 
 export interface Credentials {
-  cookies: string; // Full cookie string for TAPD requests
+  cookies: string; // Full cookie string for www.tapd.cn requests
+  fileCookies?: string; // Full cookie string for file.tapd.cn requests
   expiresAt: number;
 }
 
@@ -107,10 +108,15 @@ export async function startBrowserLogin(): Promise<Credentials> {
             clearInterval(check);
             clearTimeout(timeout);
 
-            // Capture all cookies
-            const cookies = await context.cookies("https://www.tapd.cn");
-            const cookieParts = cookies.map(c => `${c.name}=${c.value}`);
-            resolve(cookieParts.join("; "));
+            // Capture all cookies for both www.tapd.cn and file.tapd.cn
+            const wwwCookies = await context.cookies("https://www.tapd.cn");
+            const fileCookies = await context.cookies("https://file.tapd.cn");
+            const cookieParts = wwwCookies.map(c => `${c.name}=${c.value}`);
+            const fileCookieParts = fileCookies.map(c => `${c.name}=${c.value}`);
+            resolve(JSON.stringify({
+              www: cookieParts.join("; "),
+              file: fileCookieParts.join("; "),
+            }));
           }
         } catch {
           // page might be navigating, ignore
@@ -119,8 +125,10 @@ export async function startBrowserLogin(): Promise<Credentials> {
     });
 
     console.error("[Auth] Login detected, cookies captured!");
+    const parsed = JSON.parse(cookieStr);
     return {
-      cookies: cookieStr,
+      cookies: parsed.www,
+      fileCookies: parsed.file,
       expiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000, // 7 days
     };
   } finally {

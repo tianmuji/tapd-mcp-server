@@ -35,29 +35,71 @@ export async function clearCredentials(): Promise<void> {
   try { fs.unlinkSync(CREDS_FILE); } catch { /* ignore */ }
 }
 
-// --- Find system Chromium installed by Playwright ---
+// --- Find a Chromium-based browser ---
 
-function findChromium(): string | undefined {
+function findBrowser(): string | undefined {
+  const platform = process.platform;
+
+  // 1. Try system-installed browsers first (Chrome, Edge, Chromium)
+  const systemCandidates: string[] = [];
+
+  if (platform === "darwin") {
+    systemCandidates.push(
+      "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+      "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge",
+      "/Applications/Chromium.app/Contents/MacOS/Chromium",
+      path.join(os.homedir(), "Applications", "Google Chrome.app", "Contents", "MacOS", "Google Chrome"),
+      path.join(os.homedir(), "Applications", "Microsoft Edge.app", "Contents", "MacOS", "Microsoft Edge"),
+    );
+  } else if (platform === "linux") {
+    systemCandidates.push(
+      "/usr/bin/google-chrome",
+      "/usr/bin/google-chrome-stable",
+      "/usr/bin/microsoft-edge",
+      "/usr/bin/microsoft-edge-stable",
+      "/usr/bin/chromium",
+      "/usr/bin/chromium-browser",
+      "/snap/bin/chromium",
+    );
+  } else if (platform === "win32") {
+    const programFiles = process.env.PROGRAMFILES || "C:\\Program Files";
+    const programFilesX86 = process.env["PROGRAMFILES(X86)"] || "C:\\Program Files (x86)";
+    const localAppData = process.env.LOCALAPPDATA || "";
+    systemCandidates.push(
+      path.join(programFiles, "Google", "Chrome", "Application", "chrome.exe"),
+      path.join(programFilesX86, "Google", "Chrome", "Application", "chrome.exe"),
+      path.join(localAppData, "Google", "Chrome", "Application", "chrome.exe"),
+      path.join(programFiles, "Microsoft", "Edge", "Application", "msedge.exe"),
+      path.join(programFilesX86, "Microsoft", "Edge", "Application", "msedge.exe"),
+    );
+  }
+
+  for (const c of systemCandidates) {
+    if (fs.existsSync(c)) return c;
+  }
+
+  // 2. Fallback: Playwright-installed Chromium
   const cacheDir = path.join(os.homedir(), "Library", "Caches", "ms-playwright");
-  if (!fs.existsSync(cacheDir)) return undefined;
+  if (fs.existsSync(cacheDir)) {
+    const dirs = fs.readdirSync(cacheDir)
+      .filter(d => d.startsWith("chromium-"))
+      .sort()
+      .reverse();
 
-  const dirs = fs.readdirSync(cacheDir)
-    .filter(d => d.startsWith("chromium-"))
-    .sort()
-    .reverse();
-
-  for (const dir of dirs) {
-    const candidates = [
-      path.join(cacheDir, dir, "chrome-mac-arm64", "Google Chrome for Testing.app", "Contents", "MacOS", "Google Chrome for Testing"),
-      path.join(cacheDir, dir, "chrome-mac", "Google Chrome for Testing.app", "Contents", "MacOS", "Google Chrome for Testing"),
-      path.join(cacheDir, dir, "chrome-mac-arm64", "Chromium.app", "Contents", "MacOS", "Chromium"),
-      path.join(cacheDir, dir, "chrome-mac", "Chromium.app", "Contents", "MacOS", "Chromium"),
-      path.join(cacheDir, dir, "chrome-linux", "chrome"),
-    ];
-    for (const c of candidates) {
-      if (fs.existsSync(c)) return c;
+    for (const dir of dirs) {
+      const playwrightCandidates = [
+        path.join(cacheDir, dir, "chrome-mac-arm64", "Google Chrome for Testing.app", "Contents", "MacOS", "Google Chrome for Testing"),
+        path.join(cacheDir, dir, "chrome-mac", "Google Chrome for Testing.app", "Contents", "MacOS", "Google Chrome for Testing"),
+        path.join(cacheDir, dir, "chrome-mac-arm64", "Chromium.app", "Contents", "MacOS", "Chromium"),
+        path.join(cacheDir, dir, "chrome-mac", "Chromium.app", "Contents", "MacOS", "Chromium"),
+        path.join(cacheDir, dir, "chrome-linux", "chrome"),
+      ];
+      for (const c of playwrightCandidates) {
+        if (fs.existsSync(c)) return c;
+      }
     }
   }
+
   return undefined;
 }
 
@@ -67,10 +109,11 @@ function findChromium(): string | undefined {
  * we capture all cookies for tapd.cn domain.
  */
 export async function startBrowserLogin(): Promise<Credentials> {
-  const execPath = findChromium();
+  const execPath = findBrowser();
   if (!execPath) {
     throw new Error(
-      "Cannot find Chromium. Please install Playwright browsers: npx playwright install chromium"
+      "Cannot find a Chromium-based browser (Chrome, Edge, or Chromium). " +
+      "Please install Google Chrome or run: npx playwright install chromium"
     );
   }
 
@@ -81,7 +124,8 @@ export async function startBrowserLogin(): Promise<Credentials> {
     headless: false,
     executablePath: execPath,
     ignoreHTTPSErrors: true,
-    viewport: { width: 1440, height: 900 },
+    viewport: null,
+    args: ["--start-maximized"],
   });
 
   try {

@@ -26,6 +26,16 @@ allowed-tools: ["mcp__plugin_tapd_tapd__*"]
 
 不要盲目根据 bug 描述修改代码。**必须先在代码中确认 bug 是否真实存在**。
 
+## 多 Bug 并行修复
+
+当用户提供多个 bug（如一组 bug ID 列表），使用 Agent 工具（subagent）并行处理以大幅缩短修复时间：
+
+1. 先统一获取所有 bug 详情，评估每个 bug 涉及的文件范围
+2. **如果多个 bug 修改的文件没有交集**，为每个 bug 启动一个独立的 Agent（使用 `isolation: "worktree"`），让它们在各自的 git worktree 中并行执行完整的修复流程（分析→视频检查→定位→修复→验证）
+3. **如果多个 bug 修改同一文件**，这些 bug 必须串行处理以避免冲突
+4. 每个 subagent 的 prompt 应包含：bug 详情、workspace_id、bug_id、项目上下文、需要关注的文件路径
+5. 所有 subagent 完成后，汇总各自的修复结果，统一报告给用户
+
 ## 工作流程
 
 ### 第 1 步：获取 Bug 信息

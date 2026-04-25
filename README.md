@@ -38,6 +38,14 @@ claude plugin install tapd@camscanner-plugins
 - 浏览器数据持久化在 `~/.tapd-mcp/browser-data/`，保存的密码下次自动填充
 - 认证信息保存在 `~/.tapd-mcp/credentials.json`，有效期 7 天
 
+## 使用示例
+
+```
+> 帮我看下 TAPD bug 12345678 的详情
+> 列出 CS_主版本 里最新的 bug
+> 修复 TAPD bug 12345678
+```
+
 ## 视频分析
 
 `analyze_bug_video` 工具可自动下载 Bug 中的视频附件（支持附件和描述中嵌入的视频），通过 ffmpeg 提取关键帧并返回图片供 AI 分析。
